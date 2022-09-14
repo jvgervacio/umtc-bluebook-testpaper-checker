@@ -2,8 +2,7 @@ import numpy as np
 import utils.utils as util
 
 class Student:
-    def __init__(self, id: int, signature_img: np.ndarray, eval_img: np.ndarray, eval: list, score: int):
-        self.id = id
+    def __init__(self, signature_img: np.ndarray, eval_img: np.ndarray, eval: list, score: int):
         self.signature_img = signature_img
         self.eval_img = eval_img
         self.eval = eval

@@ -1,6 +1,4 @@
-def add(x):
-    x = x + 1
+import random
+random_id = random.randint(0, 999999)
 
-x = 1
-add(x)
-print(x)
+print(random_id)

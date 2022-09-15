@@ -13,4 +13,4 @@ def run(debug: bool = False):
     app.run(debug=debug)
 
 if __name__ == '__main__':
-    run(True)
+    run()

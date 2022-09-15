@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append('./')
+
 from sqlite3 import dbapi2
 from flask_restful import Resource
 import utils.database as db

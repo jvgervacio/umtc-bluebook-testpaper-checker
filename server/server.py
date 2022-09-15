@@ -1,13 +1,16 @@
 from flask import Flask, request
 from flask_restful import Api, Resource
+from resources import Student
 
+app = Flask(__name__)
+api = Api(app)
 
-_APP, _API = None, None
+def __init__():
+    api.add_resource(Student, '/student/<int:id>')
 
-def initialize():
-    _APP = Flask(__name__)
-    _API = Api(_APP)
+def run(debug: bool = False):
+    __init__()
+    app.run(debug=debug)
 
 if __name__ == '__main__':
-    initialize()
-    _APP.run()
+    run(True)

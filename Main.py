@@ -55,7 +55,7 @@ def evaluateStudentAnswerSheet():
                 else:
                     x = ord(answer_key[k]) - 65
                     cx = (x * w) + w//2
-                    cy = (j * h) + h//2    
+                    cy = (j * h) + h//2
                     cv.circle(contours[i], (cx + 95, cy+25), 30, (0, 255, 255), 5)
                     color = (0,0,255)
 
@@ -68,11 +68,11 @@ def evaluateStudentAnswerSheet():
 
     shaded_img = util.resize_image(cv.hconcat(contours), 720)
     eval = np.concatenate(eval).tolist()
-    eval_imgpath = f'images/output/student_{n_student}.png'
+    eval_imgpath = f'images/output/student_{n_student}_EVAL.png'
     cv.imwrite(eval_imgpath, shaded_img)
-    db.add_student(Student(eval_imgpath, eval_imgpath, eval, score))
+    db.add_student(Student(n_student, eval, score))
     n_student += 1
         
 if __name__ == '__main__':
-    os.system("start /wait cmd /c pythonw server/server.py")
+    # os.system("start /wait cmd /c pythonw server/server.py")
     main()

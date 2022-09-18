@@ -2,7 +2,7 @@ import json
 from random import randint
 from models.student import Student
 
-_JSON_FILE_NAME = "./database/data.json"
+_JSON_FILE_NAME = "database/data.json"
 
 
 def load():
@@ -40,4 +40,8 @@ def add_student(student: Student):
 def get_students() -> list:
     data = load()
     return data['students']
+
+def clear():
+    data = {}
+    commit(data)
 

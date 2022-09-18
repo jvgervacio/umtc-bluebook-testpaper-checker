@@ -14,8 +14,8 @@ def initialize(img: np.ndarray):
     rect_contours = getRectContours(contours)
     warped_rect = [util.warpImage(img, rect) for rect in rect_contours]
     
-    getSignatureArea(rect_contours)
-    return (img, warped_rect)
+    # getSignatureArea(rect_contours)
+    return (img, rect_contours, warped_rect)
 
 
 def getSignatureArea(rect_contours: list):

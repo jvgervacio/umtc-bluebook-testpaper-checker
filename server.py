@@ -1,10 +1,11 @@
-import json
-from flask import Flask, request, jsonify, abort, make_response
+from flask import Flask, request, jsonify, abort, make_response, Response,  render_template_string
 from flask_restful import Api, Resource
 from database import database as db
+import cv2 as cv
 
 app = Flask(__name__)
 api = Api(app)
+
 SESSION_ID = 123
 
 @app.route('/<int:session_id>/answerkey/analysis/<int:item_no>')
@@ -68,7 +69,30 @@ def autheticate():
         abort(401, 'Invalid SESSION ID')
     return 'success'
 
-if __name__ == '__main__':
+
+@app.route('/')
+def index():
+    # rendering webpage
+    return render_template_string('''
+    <img id="bg" src="{{ url_for('video_feed') }}">
+    ''')
+
+def gen(camera):
+    while True:
+        #get camera frame
+        ret, frame = camera.read()
+        cv.imshow('live', frame)
+        cv.waitKey(1)
+        yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+        
+@app.route('/video_feed')
+def video_feed():
+    cam = cv.VideoCapture(0, 2)
+    return Response(gen(cam),mimetype='multipart/x-mixed-replace; boundary=frame')
+def start(debug: bool = True):
     app.run(host = '0.0.0.0', 
-            port = 80, 
-            debug = True)
+            port = 5000, 
+            debug = debug)
+
+if __name__ == '__main__':
+        start(True)

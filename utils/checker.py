@@ -7,7 +7,7 @@ THRESHOLD_VAL = 100
 BOX_W, BOX_H = 0, 0
 
 def initialize(img: np.ndarray):
-    img = util.resize_image(img, 1280)
+    img = util.resize_image(img, 1980)
     processed_img = util.preprocess_img(img)
     img_CONTOUR = img.copy()
     contours, _ = cv.findContours(processed_img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)

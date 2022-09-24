@@ -8,15 +8,17 @@ api = Api(app)
 
 SESSION_ID = 123
 
-@app.route('/<int:session_id>/answerkey/analysis/<int:item_no>')
-def getItemAnalysis(session_id, item_no):
-    if session_id != SESSION_ID:
-        abort(401, 'Invalid SESSION ID')
+logged_in = []
+
+@app.route('/answerkey/analysis/<int:item_no>')
+def getItemAnalysis(item_no):
+    if request.remote_addr not in logged_in:
+        return abort(403, "Not authorized")
     data = db.load()
     
     if item_no >= len(data['answer_key']) or item_no < 0:
         abort(401, 'Invalid Item Number')
-    
+
     analysis = {
         'answer_key': data['answer_key'][item_no],
         'correct': 0,
@@ -38,35 +40,46 @@ def getItemAnalysis(session_id, item_no):
 
     return jsonify(analysis)
 
-@app.route('/<int:session_id>/answerkey')
-def getAnswerKey(session_id):
-    if session_id != SESSION_ID:
-        abort(401, 'Invalid SESSION ID')
+@app.route('/answerkey')
+def getAnswerKey():
+    if request.remote_addr not in logged_in:
+        return abort(403, "Not authorized")
     ans_key = db.get_answer_key()
     return jsonify(ans_key)
 
-@app.route('/<int:session_id>/students')
-def getStudents(session_id):
-    if session_id != SESSION_ID:
-        abort(401, 'Invalid SESSION ID')
+@app.route('/students')
+def getStudents():
+    if request.remote_addr not in logged_in:
+        return abort(403, "Not authorized")
     students = db.get_students()
     return jsonify(students)
 
-@app.route('/<int:session_id>/students/<int:id>')
-def getStudent(session_id, id):
-    if session_id != SESSION_ID:
-        abort(401, 'Invalid SESSION ID')
+@app.route('/students/<int:id>')
+def getStudent(id):
+    if request.remote_addr not in logged_in:
+        return abort(403, "Not authorized")
     students= db.get_students()
     if id >= len(students):
         abort(404, 'student not found')
     return jsonify(students[id])
 
+
+@app.route('/logout', methods = ['POST'])
+def logout():
+    if request.remote_addr not in logged_in:
+        return abort(403, "Not authorized")
+    while request.remote_addr in logged_in:
+        logged_in.remove(request.remote_addr)
+        
+    return 'success'
+
 @app.route('/auth', methods = ['POST'])
 def autheticate():
     session_id = request.form.get('session_id', type=int)
-    print(f'session_id: {session_id}')
     if session_id != SESSION_ID:
         abort(401, 'Invalid SESSION ID')
+    else:
+        logged_in.append(request.remote_addr)
     return 'success'
 
 

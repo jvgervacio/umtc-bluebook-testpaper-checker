@@ -29,9 +29,9 @@ def evaluate(rect_contours: list):
         nonzero_items = [[np.count_nonzero(i) for i in item] for item in splitBoxes(rect)]
         items = []
 
-        for item in nonzero_items:
+        for i, item in enumerate(nonzero_items):
             avg = np.mean(item)
-            items.append(np.where(item > avg, 1, 0))     
+            items.append([-1] if avg < 500 else np.where(item > avg, 1, 0))     
         eval.append(items)
 
     return eval
@@ -56,7 +56,7 @@ def getRectContours(contours):
     rects = []
     for contour in contours:
         area = cv.contourArea(contour)
-        if area > 10000:
+        if area > 15000:
             corner_points = util.getCornerPoints(contour)
             if len(corner_points) == 4:
                 rects.append(contour)

@@ -13,15 +13,21 @@ def serialize_img(img: np.ndarray) -> bytes:
 
 def preprocess_img(img: np.ndarray): 
     img_GRAY = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    img_BLUR = cv.GaussianBlur(img_GRAY, (5,5), 1)
-    img_CANNY = cv.Canny(img_BLUR, 30, 60)
-    # cv.imshow("gray", img_GRAY)
-    # cv.imshow("blur", img_BLUR)
-    # cv.imshow("canny", img_CANNY)
+    img_BLUR = cv.GaussianBlur(img_GRAY, (5,5), 3)
+    # img_LAP = cv.Laplacian(img_BLUR, cv.CV_64FC4, ksize=3)
+    ret, thresh = cv.threshold(img_BLUR, 100, 255, cv.THRESH_BINARY_INV)
+    img_CANNY = cv.Canny(thresh, 30, 100)
+    # cv.imshow("thresh", resize_image(thresh,  1280))
+    # cv.imshow("canny", resize_image(img_CANNY,  1280))
     return img_CANNY
 
 def resize_image(img: np.ndarray, new_width):
-    h, w, _ = img.shape
+    h = 0
+    w = 0
+    try:
+        h, w, _ = img.shape
+    except ValueError:
+        h, w = img.shape
     ratio = w/h
     WIDTH = new_width 
     HEIGHT = int(WIDTH / ratio)

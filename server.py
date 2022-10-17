@@ -3,20 +3,25 @@ from flask import Flask, request, jsonify, abort, make_response, Response,  send
 from flask_restful import Api, reqparse
 from database import database as db
 import cv2 as cv
-
+from threading import Thread
 app = Flask(__name__)
 api = Api(app)
-
+import os
 SESSION_ID = '123456'
 
 logged_in = set()
-cam = cv.VideoCapture(0)
+cam = None
+def initializeCamera():
+    global cam
+    cam = cv.VideoCapture(-1, cv.CAP_V4L2)
+    cam.set(cv.CAP_PROP_FOURCC, cv.VideoWriter.fourcc('M', 'J', 'P', 'G'))
+    cam.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
+    cam.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)   
 
 @app.route('/answerkey/analysis')
 def getItemAnalysis():
     if request.remote_addr not in logged_in:
-        return abort(403)
-    
+        return abort(403)   
     try:
         data = db.load()
         item = int(request.args.get('item'))
@@ -81,7 +86,19 @@ def getStudentEvalImage():
 
     id = request.args.get('id')
     try:
-        file = f"database/output/student_{id}_EVAL.png"
+        file = f"database/output/student_{id}/eval.png"
+        return send_file(file, mimetype='image/png')
+    except:
+        abort(400)
+
+@app.route('/student/signature_img')
+def getStudentSignatureImage():
+    if request.remote_addr not in logged_in:
+        return abort(403)
+
+    id = request.args.get('id')
+    try:
+        file = f"database/output/student_{id}/signature.png"
         return send_file(file, mimetype='image/png')
     except:
         abort(400)
@@ -107,26 +124,36 @@ def authenticate():
         logged_in.add(request.remote_addr)
     return 'success'
 
-def gen(camera):
+def gen():
+    global frame
     while True:
-        success, frame = camera.read()
-        if not success:
-            
+        if frame is None:
             break
-        else:
-            ret, buffer = cv.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+        ret, buffer = cv.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
         
 @app.route('/video_feed')
 def video_feed():
-    
-    return Response(gen(cam),mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(gen(cam), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+def startCamera():
+    global frame
+    while True:
+        try:
+            success, frame = cam.read()
+        except:
+            print("")    
 
 def start(debug: bool = True):
+    initializeCamera()
+    thread = Thread(target=startCamera)
+    thread.start()
+    thread.join()
+    print("Running Server...")
     app.run(host = '0.0.0.0', 
-            port = 5000, 
-            debug = debug)
+            port = 8000, 
+            debug = debug, threaded = True)
 
 if __name__ == '__main__':
-        start(True)
+    start(True)

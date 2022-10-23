@@ -125,35 +125,26 @@ def authenticate():
     return 'success'
 
 def gen():
-    global frame
+    global frame,cam
     while True:
-        if frame is None:
-            break
-        ret, buffer = cv.imencode('.jpg', frame)
+        success, frame = cam.read()
+        ret, buffer = cv.imencode('.jpg', cv.rotate(frame, cv.ROTATE_180))
         frame = buffer.tobytes()
-        yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+        # yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+        yield (b'--frame\r\n'
+       b'Content-Type:image/jpeg\r\n'
+       b'Content-Length: ' + f"{len(frame)}".encode() + b'\r\n'
+       b'\r\n' + frame + b'\r\n')
         
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen(cam), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-def startCamera():
-    global frame
-    while True:
-        try:
-            success, frame = cam.read()
-        except:
-            print("")    
-
-def start(debug: bool = True):
+def startServer():
     initializeCamera()
-    thread = Thread(target=startCamera)
-    thread.start()
-    thread.join()
-    print("Running Server...")
     app.run(host = '0.0.0.0', 
             port = 8000, 
-            debug = debug, threaded = True)
+            debug = False)
 
 if __name__ == '__main__':
-    start(True)
+    startServer()    

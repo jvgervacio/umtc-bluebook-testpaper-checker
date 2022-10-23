@@ -4,7 +4,6 @@ import base64
 import numpy as np
 
 def serialize_img(img: np.ndarray) -> bytes:
-    print(type(img))
     if type(img) == np.ndarray:
         img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         img = Image.fromarray(img)
@@ -15,10 +14,10 @@ def preprocess_img(img: np.ndarray):
     img_GRAY = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     img_BLUR = cv.GaussianBlur(img_GRAY, (5,5), 3)
     # img_LAP = cv.Laplacian(img_BLUR, cv.CV_64FC4, ksize=3)
-    ret, thresh = cv.threshold(img_BLUR, 100, 255, cv.THRESH_BINARY_INV)
-    img_CANNY = cv.Canny(thresh, 30, 100)
-    # cv.imshow("thresh", resize_image(thresh,  1280))
-    # cv.imshow("canny", resize_image(img_CANNY,  1280))
+    thresh = cv.threshold(img_BLUR, 80, 100, cv.THRESH_BINARY_INV)[1]
+    img_CANNY = cv.Canny(thresh, 100, 200)
+    
+    
     return img_CANNY
 
 def resize_image(img: np.ndarray, new_width):
@@ -33,13 +32,12 @@ def resize_image(img: np.ndarray, new_width):
     HEIGHT = int(WIDTH / ratio)
     return cv.resize(img, (WIDTH, HEIGHT))
 
-def warpImage(img: np.ndarray, contour):
-    w, h = 500, 2000
+def warpImage(img: np.ndarray, contour, width, height):
     corner_points = getReorderedCornerPoints(contour)
     pt1 = np.float32(corner_points)
-    pt2 = np.float32([[0,0], [w, 0], [0,h], [w, h]])
+    pt2 = np.float32([[0,0], [width, 0], [0,height], [width, height]])
     matrix = cv.getPerspectiveTransform(pt1, pt2)
-    warped = cv.warpPerspective(img, matrix, (w, h))
+    warped = cv.warpPerspective(img, matrix, (width, height))
     return warped
 
 

@@ -27,6 +27,7 @@ def set_answer_key(ans_key: list):
             'students': []}
 
     commit(data)
+    return data['session_id']
 
 def get_answer_key() -> list:
     data = load()

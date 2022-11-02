@@ -19,7 +19,7 @@ def initialize(img: np.ndarray):
     return (img, rect_contours, warped_rects)
 
 def getSignatureArea(img:np.ndarray):
-    rects = getRectContours(contours, 75000, 78000)
+    rects = getRectContours(contours, 55000, 78000)
     if len(rects) == 0:
         raise Exception("Cant find Signature Area!")
     
@@ -27,6 +27,7 @@ def getSignatureArea(img:np.ndarray):
 
 def evaluate(rect_contours: list):
     eval = []
+    
     for i,rect in enumerate(rect_contours):
         # cv.imwrite(f"database/output/img {i}.png", rect)
         # if i == 0:
@@ -36,10 +37,11 @@ def evaluate(rect_contours: list):
         nonzero_items = [[np.count_nonzero(i) for i in item] for item in splitBoxes(rect)]
         
         items = []
-        for i, item in enumerate(nonzero_items):
+        
+        for j, item in enumerate(nonzero_items):
             avg = np.mean(item)
-            # print(i, item)
-            items.append([-1] if avg < 100 else np.where(item > avg, 1, 0))     
+            # print( j + (i * 20) + 1, avg, item)
+            items.append([-1] if avg < 90 else np.where(item > avg, 1, 0))     
         eval.append(items)
 
     return eval

@@ -1,4 +1,5 @@
 from asyncio import events
+from curses.ascii import isalpha
 import shutil
 import cv2 as cv
 import numpy as np
@@ -17,7 +18,9 @@ EVAL_PIN = 21
 ANSK_PIN = 20
 LED1 = 15
 LED2 = 14
-cap = None
+cam = None
+
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(EVAL_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(ANSK_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -25,14 +28,12 @@ GPIO.setup(LED1, GPIO.OUT)
 GPIO.setup(LED2, GPIO.OUT)
 
 def main():
-    global cap
-    try:
+    try: 
         n_student = len(db.get_students())
         GPIO.output(LED2, GPIO.HIGH)
         GPIO.output(LED1, GPIO.LOW)
         GPIO.add_event_detect(EVAL_PIN, GPIO.RISING, callback=evaluateStudentAnswerSheet, bouncetime=2000)
         GPIO.add_event_detect(ANSK_PIN, GPIO.RISING, callback=evaluateAnswerSheet, bouncetime=2000)
-        
         server.startServer()
     except KeyboardInterrupt as e:
         print("SESSION CLOSED!")
@@ -43,6 +44,7 @@ def cleanup():
     GPIO.remove_event_detect(EVAL_PIN)
     GPIO.remove_event_detect(ANSK_PIN)
     GPIO.cleanup()
+    
 def evaluateAnswerSheet(channel):
     print("[INFO] Capturing AnswerSheet...")
     GPIO.output(LED1, GPIO.LOW)
@@ -51,14 +53,22 @@ def evaluateAnswerSheet(channel):
         n_student = 0
         answer_key = []
         frame = np.ndarray
-        try:
-            success, frame = server.cam.read()
-        except:
-            pass
+        success, frame = server.cam.read()
+        
+        if not success:
+            raise Exception("Failed to capture image from camera")
+        
+        
         frame = cv.rotate(frame, cv.ROTATE_180)   
-        frame, contours,warped = checker.initialize(frame)
+        cv.imwrite("test.jpg", frame)
+        frame, contours, warped = checker.initialize(frame)
+
+        if len(warped) != 5:
+            raise Exception("Please Align the answer sheet correctly")
+        
         
         eval = checker.evaluate(warped)
+        # count = 1
         for items in eval:
             for item in items:
                 answer = np.where(item == 1)[0]
@@ -67,9 +77,20 @@ def evaluateAnswerSheet(channel):
                     raise Exception("Invalid AnswerSheet")
                 
                 answer = chr(65 + answer[0]) if len(answer) == 1 else " "
+                # print(count, answer)
+                # count+=1
+
                 answer_key.append(answer)
         
-        # answer_key = [choice(['A', 'B', 'C', 'D', 'E']) for _ in range(100)]
+        ans_string = ''.join(answer_key).rstrip()
+        # print(ans_string)
+        answer_key = [*ans_string]
+        # print(answer_key)
+        
+        for x in answer_key:
+            if not x.isalpha:
+                raise Exception("Invalid AnswerSheet")
+            
         session_id = db.set_answer_key(answer_key)
         print(f'[SUCCESS] Answersheet Captured (SESSION ID: {session_id})')
         if(os.path.exists(OUTPUT_PATH)):
@@ -77,13 +98,14 @@ def evaluateAnswerSheet(channel):
         
         os.makedirs(OUTPUT_PATH)   
         cv.imwrite(f'{OUTPUT_PATH}/ANSWER_SHEET.png', util.resize_image(cv.hconcat(warped), 720))
+        server.new_data = True
     except Exception as e:
-        print("[ERROR]", e)
+        print("[ERROR] ", e)
         GPIO.output(LED1, GPIO.HIGH)
     
 
 def evaluateStudentAnswerSheet(channel):
-    print("[INFO] Capturing Student AnswerSheet...")
+    print("[INFO]  Capturing Student AnswerSheet...")
     GPIO.output(LED1, GPIO.LOW)
     # try:
     global n_student
@@ -139,6 +161,7 @@ def evaluateStudentAnswerSheet(channel):
         n_student += 1
         print(F"[INFO] STUDENT_{n_student} Score:", score)
         print('[SUCCESS] Student Answer Captured')
+        server.new_data = True
     except Exception as e:
         print("[ERROR] ", e) 
         GPIO.output(LED1, GPIO.HIGH)

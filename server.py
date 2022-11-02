@@ -3,21 +3,43 @@ from flask import Flask, request, jsonify, abort, make_response, Response,  send
 from flask_restful import Api, reqparse
 from database import database as db
 import cv2 as cv
-from threading import Thread
-app = Flask(__name__)
-api = Api(app)
-import os
-SESSION_ID = '123456'
+from threading import Thread, Lock
+from flask_socketio import SocketIO, emit, send
+from utils import utils as util, checker
 
+app = Flask(__name__)
+socket = SocketIO(app, async_mode=None)
+thread = None
+thread_lock = Lock()
+
+SESSION_ID = '123456'
 logged_in = set()
 cam = None
+new_data = True
+
 def initializeCamera():
     global cam
-    cam = cv.VideoCapture(-1, cv.CAP_V4L2)
+    cam = cv.VideoCapture(0, cv.CAP_V4L2)
     cam.set(cv.CAP_PROP_FOURCC, cv.VideoWriter.fourcc('M', 'J', 'P', 'G'))
     cam.set(cv.CAP_PROP_FRAME_WIDTH, 1920)
-    cam.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)   
+    cam.set(cv.CAP_PROP_FRAME_HEIGHT, 1080)
+    
 
+def backgroundThread():
+    global new_data
+    while True:
+        socket.sleep(3)
+        socket.emit("New Data", {"status": new_data}) 
+        new_data = False
+
+@socket.event
+def connect():
+    global thread
+    with thread_lock:
+        if thread is None:
+            thread = socket.start_background_task(backgroundThread)
+    
+    
 @app.route('/answerkey/analysis')
 def getItemAnalysis():
     if request.remote_addr not in logged_in:
@@ -110,7 +132,6 @@ def logout():
         return abort(401)
     while request.remote_addr in logged_in:
         logged_in.remove(request.remote_addr)
-
     return make_response("Success", 200)
 
 @app.route('/auth', methods = ['POST'])
@@ -128,7 +149,14 @@ def gen():
     global frame,cam
     while True:
         success, frame = cam.read()
-        ret, buffer = cv.imencode('.jpg', cv.rotate(frame, cv.ROTATE_180))
+        if not success:
+            return
+        frame = cv.rotate(frame, cv.ROTATE_180)
+        img = util.preprocess_img(frame)
+        contours, _ = cv.findContours(img, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_NONE)
+        rect_contours = checker.getRectContours(contours, 55000, 270000)
+        cv.drawContours(frame, rect_contours, -1, (0,255,0), 2)
+        ret, buffer = cv.imencode('.jpeg',  frame)
         frame = buffer.tobytes()
         # yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
         yield (b'--frame\r\n'
@@ -141,10 +169,13 @@ def video_feed():
     return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def startServer():
-    initializeCamera()
-    app.run(host = '0.0.0.0', 
-            port = 8000, 
-            debug = False)
-
+    try:
+        initializeCamera()
+        socket.run(app, host = '0.0.0.0', port = 8000, debug = False)
+    except KeyboardInterrupt:
+        print("[INFO] Camera Released!")
+        cam.release()
+        
 if __name__ == '__main__':
-    startServer()    
+    startServer() 
+     

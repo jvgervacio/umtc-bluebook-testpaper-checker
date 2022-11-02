@@ -19,6 +19,8 @@ while True:
         frame = cv.rotate(frame, cv.ROTATE_180)
         img = frame.copy()
         frame, contours, warped, = checker.initialize(frame)
+        cv.drawContours(frame, contours, -1, (0,255,0), 2)
+        cv.imshow("Contours", util.resize_image(frame, 1280))
         try:
             boxes = checker.splitBoxes(warped[y][10:-10, 60:-10])
             # if tresh:
